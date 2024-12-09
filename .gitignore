@@ -1,0 +1,12 @@
+.env
+.local.env
+
+.DS_Store
+
+.venv
+.env
+
+.vscode
+
+.ipynb_checkpoints
+
