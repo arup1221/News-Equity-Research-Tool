@@ -46,7 +46,6 @@ main_placeholder = st.empty()
 llm = ChatGroq(
     temperature=0.9,
     model="openai/gpt-oss-120b",   # or llama-3.3-70b-versatile,openai/gpt-oss-120b etc.
-    max_tokens=500
 )
 
 # Initialize session state for embeddings and vectorstore
@@ -68,8 +67,8 @@ if process_url_clicked and urls:
         # Split data into chunks
         text_splitter = RecursiveCharacterTextSplitter(
             separators=["\n\n", "\n", " ", ""],
-            chunk_size=500,
-            chunk_overlap=100,
+            chunk_size=1000,
+            chunk_overlap=120,
             )
         main_placeholder.text("Splitting text into chunks...✅✅✅")
         docs = text_splitter.split_documents(data)
@@ -93,12 +92,12 @@ if query:
         if "vectorstore" in st.session_state:
             vectorstore = st.session_state.vectorstore
             retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-            chain = RetrievalQAWithSourcesChain.from_llm(llm=llm, retriever=retriever)
+            chain = RetrievalQAWithSourcesChain.from_llm(llm=llm, retriever=retriever, return_source_documents=True)
 
             # Query the chain
             result = chain({"question": query}, return_only_outputs=True)
 
-            # Display the answer
+# show the answer
             st.header("Answer")
             st.write(result["answer"])
 
@@ -106,9 +105,26 @@ if query:
             sources = result.get("sources", "")
             if sources:
                 st.subheader("Sources:")
-                sources_list = sources.split("\n")  # Split sources by newline
-                for source in sources_list:
-                    st.write(source)
+                if "source_documents" in result and result["source_documents"]:
+                    seen = set()
+                    for doc in result["source_documents"]:
+                        src = (
+                            doc.metadata.get("source")
+                            or doc.metadata.get("url")
+                            or doc.metadata.get("Website")
+                            or "Unknown source"
+                        )
+                        if src not in seen:
+                            st.write(src)
+                            seen.add(src)
+            else:
+                # fallback: if nothing came back (rare), try the model-provided string
+                sources_text = result.get("sources", "").strip()
+                if sources_text:
+                    for line in sources_text.split("\n"):
+                        st.write(line)
+                else:
+                    st.write("No sources returned.")
         else:
             st.error("FAISS index is not available. Please process URLs first.")
     except Exception as e:
