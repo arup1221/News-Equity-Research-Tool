@@ -98,3 +98,6 @@ protobuf==5.28.3
 # platformdirs caused conflicts with virtualenv; we don't need virtualenv at runtime.
 # If you *must* pin it for another lib, keep it in the 3.x range.
 platformdirs>=3.10,<4
+
+
+unstructured==0.18.13
