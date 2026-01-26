@@ -45,7 +45,7 @@ main_placeholder = st.empty()
 
 llm = ChatGroq(
     temperature=0.9,
-    model="openai/gpt-oss-120b",   # or llama-3.3-70b-versatile,openai/gpt-oss-120b etc.
+    model="llama-3.3-70b-versatile",   # or llama-3.3-70b-versatile,openai/gpt-oss-120b etc.
 )
 
 # Initialize session state for embeddings and vectorstore
@@ -84,28 +84,79 @@ if process_url_clicked and urls:
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
 
+# # Question input and retrieval
+# query = st.text_input("Ask a question:")
+# if query:
+#     try:
+#         # Ensure vectorstore is loaded
+#         if "vectorstore" in st.session_state:
+#             vectorstore = st.session_state.vectorstore
+#             retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+#             chain = RetrievalQAWithSourcesChain.from_llm(llm=llm, retriever=retriever, return_source_documents=True)
+
+#             # Query the chain
+#             result = chain({"question": query}, return_only_outputs=True)
+
+# # show the answer
+#             st.header("Answer")
+#             st.write(result["answer"])
+
+#             # Display sources if available
+#             sources = result.get("sources", "")
+#             if sources:
+#                 st.subheader("Sources:")
+#                 if "source_documents" in result and result["source_documents"]:
+#                     seen = set()
+#                     for doc in result["source_documents"]:
+#                         src = (
+#                             doc.metadata.get("source")
+#                             or doc.metadata.get("url")
+#                             or doc.metadata.get("Website")
+#                             or "Unknown source"
+#                         )
+#                         if src not in seen:
+#                             st.write(src)
+#                             seen.add(src)
+#             else:
+#                 # fallback: if nothing came back (rare), try the model-provided string
+#                 sources_text = result.get("sources", "").strip()
+#                 if sources_text:
+#                     for line in sources_text.split("\n"):
+#                         st.write(line)
+#                 else:
+#                     st.write("No sources returned.")
+#         else:
+#             st.error("FAISS index is not available. Please process URLs first.")
+#     except Exception as e:
+#         st.error(f"An error occurred while querying: {str(e)}")
+
+
 # Question input and retrieval
 query = st.text_input("Ask a question:")
 if query:
     try:
-        # Ensure vectorstore is loaded
         if "vectorstore" in st.session_state:
             vectorstore = st.session_state.vectorstore
             retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-            chain = RetrievalQAWithSourcesChain.from_llm(llm=llm, retriever=retriever, return_source_documents=True)
 
-            # Query the chain
-            result = chain({"question": query}, return_only_outputs=True)
+            chain = RetrievalQAWithSourcesChain.from_llm(
+                llm=llm,
+                retriever=retriever,
+                return_source_documents=True
+            )
 
-# show the answer
+            # ✅ NEW API
+            result = chain.invoke({"question": query})
+
+            # Show answer
             st.header("Answer")
             st.write(result["answer"])
 
-            # Display sources if available
+            # Show sources
             sources = result.get("sources", "")
             if sources:
                 st.subheader("Sources:")
-                if "source_documents" in result and result["source_documents"]:
+                if result.get("source_documents"):
                     seen = set()
                     for doc in result["source_documents"]:
                         src = (
@@ -118,14 +169,10 @@ if query:
                             st.write(src)
                             seen.add(src)
             else:
-                # fallback: if nothing came back (rare), try the model-provided string
-                sources_text = result.get("sources", "").strip()
-                if sources_text:
-                    for line in sources_text.split("\n"):
-                        st.write(line)
-                else:
-                    st.write("No sources returned.")
+                st.write("No sources returned.")
+
         else:
             st.error("FAISS index is not available. Please process URLs first.")
+
     except Exception as e:
         st.error(f"An error occurred while querying: {str(e)}")
